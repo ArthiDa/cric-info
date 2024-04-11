@@ -36,7 +36,6 @@ import { Label } from "@/components/ui/label";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { set, useForm } from "react-hook-form";
-import { match } from "assert";
 
 const createMatchFormSchema = z.object({
   teamA: z
@@ -55,16 +54,19 @@ const createMatchFormSchema = z.object({
     .max(50, {
       message: "Team name should not exceed 50 characters",
     }),
-  overs: z.number().int().positive({
-    message: "Overs should be a positive number",
-  }),
+  overs: z
+    .string()
+    .regex(/^\d+$/, { message: "Overs should be a positive integer" })
+    .refine((value) => parseInt(value, 10) > 0, {
+      message: "Overs should be greater than 0",
+    }),
   wickets: z
-    .number()
-    .int()
-    .min(0, {
-      message: "Wickets should be a positive number",
+    .string()
+    .regex(/^\d+$/, { message: "Wickets should be a positive integer" })
+    .refine((value) => parseInt(value, 10) > 0, {
+      message: "Wickets should be greater than 0",
     })
-    .max(10, {
+    .refine((value) => parseInt(value, 10) <= 10, {
       message: "Wickets should not exceed 10",
     }),
 });
@@ -82,8 +84,8 @@ export function CreateMatchForm() {
     defaultValues: {
       teamA: "",
       teamB: "",
-      overs: 0,
-      wickets: 0,
+      overs: "1",
+      wickets: "1",
     },
   });
 
@@ -187,11 +189,7 @@ export function CreateMatchForm() {
                 <FormItem>
                   <FormLabel>Overs</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      {...field}
-                      onChange={(event) => field.onChange(+event.target.value)}
-                    />
+                    <Input type="number" {...field} defaultValue={"1"} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
@@ -204,11 +202,7 @@ export function CreateMatchForm() {
                 <FormItem>
                   <FormLabel>Wickets</FormLabel>
                   <FormControl>
-                    <Input
-                      type="number"
-                      {...field}
-                      onChange={(event) => field.onChange(+event.target.value)}
-                    />
+                    <Input type="number" {...field} defaultValue={"1"} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>
