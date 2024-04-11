@@ -36,6 +36,8 @@ import { Label } from "@/components/ui/label";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { set, useForm } from "react-hook-form";
+import { team } from "@/lib/definitions";
+import { createPlayer } from "@/lib/actions/player.action";
 
 const createPlayerFormSchema = z.object({
   playerName: z
@@ -56,13 +58,7 @@ const createPlayerFormSchema = z.object({
     }),
 });
 
-const teams = [
-  { teamName: "Bangladesh", teamColor: "Green" },
-  { teamName: "India", teamColor: "Blue" },
-  { teamName: "England", teamColor: "Red" },
-];
-
-export function CreatePlayerForm() {
+export function CreatePlayerForm({ teams }: { teams: team[] }) {
   const [open, setOpen] = useState(false);
   const form = useForm<z.infer<typeof createPlayerFormSchema>>({
     resolver: zodResolver(createPlayerFormSchema),
@@ -72,14 +68,21 @@ export function CreatePlayerForm() {
     },
   });
 
-  // 2. Define a submit handler.
-  function onSubmit(values: z.infer<typeof createPlayerFormSchema>) {
-    // Do something with the form values.
-    // ✅ This will be type-safe and validated.
-    console.log(values);
-    // reset the form
-    form.reset();
-    setOpen(false);
+  async function onSubmit(values: z.infer<typeof createPlayerFormSchema>) {
+    // get team id from team name
+    const teamId =
+      teams.find((team) => team.teamName === values.teamName)?._id || "";
+
+    // create player
+    const res = await createPlayer({ playerName: values.playerName, teamId });
+    if (res.success) {
+      form.reset();
+      setOpen(false);
+      alert("Player created successfully");
+    } else {
+      console.log(res.error);
+      alert("Failed to create player");
+    }
   }
 
   return (
@@ -130,7 +133,7 @@ export function CreatePlayerForm() {
                     <SelectContent>
                       <SelectGroup>
                         {teams.map((team) => (
-                          <SelectItem key={team.teamName} value={team.teamName}>
+                          <SelectItem key={team._id} value={team.teamName}>
                             <Label>{team.teamName}</Label>
                           </SelectItem>
                         ))}

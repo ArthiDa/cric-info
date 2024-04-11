@@ -36,6 +36,8 @@ import { Label } from "@/components/ui/label";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { set, useForm } from "react-hook-form";
+import { team } from "@/lib/definitions";
+import { createMatch } from "@/lib/actions/match.action";
 
 const createMatchFormSchema = z.object({
   teamA: z
@@ -71,13 +73,7 @@ const createMatchFormSchema = z.object({
     }),
 });
 
-const teams = [
-  { teamName: "Bangladesh", teamColor: "Green" },
-  { teamName: "India", teamColor: "Blue" },
-  { teamName: "England", teamColor: "Red" },
-];
-
-export function CreateMatchForm() {
+export function CreateMatchForm({ teams }: { teams: team[] }) {
   const [open, setOpen] = useState(false);
   const form = useForm<z.infer<typeof createMatchFormSchema>>({
     resolver: zodResolver(createMatchFormSchema),
@@ -89,14 +85,28 @@ export function CreateMatchForm() {
     },
   });
 
-  function onSubmit(values: z.infer<typeof createMatchFormSchema>) {
+  async function onSubmit(values: z.infer<typeof createMatchFormSchema>) {
     if (values.teamA === values.teamB) {
       alert("Team A and Team B should be different");
       return;
     }
-    console.log(values);
-    form.reset();
-    setOpen(false);
+    const teamIdA = teams.find((team) => team.teamName === values.teamA)?._id;
+    const teamIdB = teams.find((team) => team.teamName === values.teamB)?._id;
+    const res = await createMatch({
+      teamIdA: teamIdA || "",
+      teamIdB: teamIdB || "",
+      overs: parseInt(values.overs, 10),
+      wickets: parseInt(values.wickets, 10),
+    });
+
+    if (res.success) {
+      form.reset();
+      setOpen(false);
+      alert("Match created successfully");
+    } else {
+      console.log(res.error);
+      alert("Failed to create match");
+    }
   }
 
   return (
