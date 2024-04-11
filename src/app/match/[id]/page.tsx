@@ -18,7 +18,7 @@ export default function MatchAvsB({ params }: { params: { id: string } }) {
   useEffect(() => {}, []);
   return (
     <div className="flex justify-center items-center h-screen">
-      <Card className="w-[400px] pt-5 mx-5 md:mx-0">
+      <Card className="w-[80%] h-[300px] pt-5 mx-5 md:mx-0">
         <div className=" flex justify-center items-center space-x-10  ">
           <div className="flex justify-center items-center flex-col space-y-2">
             <Avatar>
