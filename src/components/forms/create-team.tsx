@@ -121,11 +121,11 @@ export function CreateTeamForm() {
               )}
             />
             <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-              <Button type="submit" className="w-full sm:w-auto">
+              <Button type="submit" className="w-1/2 sm:w-auto">
                 Create Team
               </Button>
               <DrawerClose asChild>
-                <Button variant="outline" className="w-full sm:w-auto">
+                <Button variant="outline" className="w-1/2 sm:w-auto">
                   Cancel
                 </Button>
               </DrawerClose>

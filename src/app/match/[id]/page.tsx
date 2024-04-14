@@ -1,4 +1,3 @@
-"use client";
 import {
   Card,
   CardContent,
@@ -8,14 +7,29 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
-import React, { useEffect, useState } from "react";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Toss } from "@/components/forms/toss";
+import { getMatch } from "@/lib/actions/match.action";
 
-export default function MatchAvsB({ params }: { params: { id: string } }) {
-  const [isTossCompleted, setIsTossCompleted] = useState(false);
-  useEffect(() => {}, []);
+export default async function MatchAvsB({
+  params,
+}: {
+  params: { id: string };
+}) {
+  const matchDetails = await getMatch(params.id);
+  if (!matchDetails.success) {
+    return <div>Failed to load match</div>;
+  }
+
+  const teamNames = {
+    teamA: matchDetails.match.teamIdA.teamName,
+    teamB: matchDetails.match.teamIdB.teamName,
+  };
+  const teamIds = {
+    teamA: matchDetails.match.teamIdA._id.toString(),
+    teamB: matchDetails.match.teamIdB._id.toString(),
+  };
+
   return (
     <div className="flex justify-center items-center h-screen">
       <Card className="w-[80%] h-[300px] pt-5 mx-5 md:mx-0">
@@ -25,32 +39,34 @@ export default function MatchAvsB({ params }: { params: { id: string } }) {
               <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
               <AvatarFallback>CN</AvatarFallback>
             </Avatar>
-            <h1>Team 1</h1>
+            <h1>{matchDetails?.match?.teamIdA.teamName}</h1>
           </div>
           <div className="flex justify-center items-center flex-col space-y-2">
             <Avatar>
               <AvatarImage src="https://github.com/shadcn.png" alt="@shadcn" />
               <AvatarFallback>CN</AvatarFallback>
             </Avatar>
-            <h1>Team 2</h1>
+            <h1>{matchDetails?.match?.teamIdB.teamName}</h1>
           </div>
         </div>
         <div className="flex flex-col space-y-1 pt-2">
-          <h1 className="text-center font-bold">Over: 5</h1>
-          <h1 className="text-center  font-bold">Wickets: 5</h1>
+          <h1 className="text-center font-bold">
+            Over: {matchDetails?.match?.overs}
+          </h1>
+          <h1 className="text-center  font-bold">
+            Wickets: {matchDetails?.match?.wickets}
+          </h1>
         </div>
         <CardFooter>
           <div className="flex justify-center w-full py-5">
-            {isTossCompleted ? (
-              <Button
-                onClick={() => {
-                  setIsTossCompleted(false);
-                }}
-              >
-                Do Scoring
-              </Button>
+            {matchDetails?.match?.toss ? (
+              <Button variant="outline">Start Match</Button>
             ) : (
-              <Toss />
+              <Toss
+                teamNames={teamNames}
+                teamIds={teamIds}
+                matchId={matchDetails?.match?._id}
+              />
             )}
           </div>
         </CardFooter>

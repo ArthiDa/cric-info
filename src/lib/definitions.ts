@@ -16,4 +16,22 @@ export type match = {
   teamIdB: string;
   overs: number;
   wickets: number;
+  toss: boolean;
+};
+
+export type matchWithTeams = {
+  _id: string;
+  teamIdA: team;
+  teamIdB: team;
+  overs: number;
+  wickets: number;
+  toss: boolean;
+};
+
+export type innings = {
+  _id: string;
+  matchId: string;
+  battingTeamId: string;
+  bowlingTeamId: string;
+  status: "live" | "completed";
 };

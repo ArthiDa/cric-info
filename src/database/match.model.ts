@@ -5,6 +5,7 @@ export interface Matches extends Document {
   teamIdB: Schema.Types.ObjectId;
   overs: number;
   wickets: number;
+  toss: boolean;
 }
 
 const matchSchema = new Schema<Matches>({
@@ -12,6 +13,7 @@ const matchSchema = new Schema<Matches>({
   teamIdB: { type: Schema.Types.ObjectId, ref: "Team" },
   overs: { type: Number, required: true },
   wickets: { type: Number, required: true },
+  toss: { type: Boolean, default: false },
 });
 
 export const MatchModel = models.Match || model<Matches>("Match", matchSchema);

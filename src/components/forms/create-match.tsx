@@ -33,11 +33,13 @@ import {
 } from "@/components/ui/select";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { z } from "zod";
+import { boolean, z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { set, useForm } from "react-hook-form";
 import { team } from "@/lib/definitions";
 import { createMatch } from "@/lib/actions/match.action";
+import { revalidatePath } from "next/cache";
+import { redirect } from "next/navigation";
 
 const createMatchFormSchema = z.object({
   teamA: z
@@ -86,26 +88,23 @@ export function CreateMatchForm({ teams }: { teams: team[] }) {
   });
 
   async function onSubmit(values: z.infer<typeof createMatchFormSchema>) {
-    if (values.teamA === values.teamB) {
-      alert("Team A and Team B should be different");
+    try {
+      if (values.teamA === values.teamB) {
+        alert("Team A and Team B should be different");
+        return;
+      }
+      const teamIdA = teams.find((team) => team.teamName === values.teamA)?._id;
+      const teamIdB = teams.find((team) => team.teamName === values.teamB)?._id;
+      const res = await createMatch({
+        teamIdA: teamIdA || "",
+        teamIdB: teamIdB || "",
+        overs: parseInt(values.overs, 10),
+        wickets: parseInt(values.wickets, 10),
+        toss: false,
+      });
+    } catch (e: any) {
+      alert("Error in creating match");
       return;
-    }
-    const teamIdA = teams.find((team) => team.teamName === values.teamA)?._id;
-    const teamIdB = teams.find((team) => team.teamName === values.teamB)?._id;
-    const res = await createMatch({
-      teamIdA: teamIdA || "",
-      teamIdB: teamIdB || "",
-      overs: parseInt(values.overs, 10),
-      wickets: parseInt(values.wickets, 10),
-    });
-
-    if (res.success) {
-      form.reset();
-      setOpen(false);
-      alert("Match created successfully");
-    } else {
-      console.log(res.error);
-      alert("Failed to create match");
     }
   }
 
@@ -219,11 +218,11 @@ export function CreateMatchForm({ teams }: { teams: team[] }) {
               )}
             />
             <div className="flex flex-col sm:flex-row justify-center items-center gap-4">
-              <Button type="submit" className="w-full sm:w-auto">
+              <Button type="submit" className="w-1/2 sm:w-auto">
                 Create Match
               </Button>
               <DrawerClose asChild>
-                <Button variant="outline" className="w-full sm:w-auto">
+                <Button variant="outline" className="w-1/2 sm:w-auto">
                   Cancel
                 </Button>
               </DrawerClose>
