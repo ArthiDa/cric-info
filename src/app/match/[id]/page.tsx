@@ -10,6 +10,7 @@ import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Toss } from "@/components/forms/toss";
 import { getMatch } from "@/lib/actions/match.action";
+import Link from "next/link";
 
 export default async function MatchAvsB({
   params,
@@ -60,7 +61,9 @@ export default async function MatchAvsB({
         <CardFooter>
           <div className="flex justify-center w-full py-5">
             {matchDetails?.match?.toss ? (
-              <Button variant="outline">Start Match</Button>
+              <Link href={`/match/${matchDetails?.match?._id}/scoring`}>
+                <Button variant="outline">Start Match</Button>
+              </Link>
             ) : (
               <Toss
                 teamNames={teamNames}
