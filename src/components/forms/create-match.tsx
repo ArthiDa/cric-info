@@ -73,6 +73,12 @@ const createMatchFormSchema = z.object({
     .refine((value) => parseInt(value, 10) <= 10, {
       message: "Wickets should not exceed 10",
     }),
+  ballInOver: z
+    .string()
+    .regex(/^\d+$/, { message: "Balls in over should be a positive integer" })
+    .refine((value) => parseInt(value, 10) > 0, {
+      message: "Balls in over should be greater than 0",
+    }),
 });
 
 export function CreateMatchForm({ teams }: { teams: team[] }) {
@@ -84,6 +90,7 @@ export function CreateMatchForm({ teams }: { teams: team[] }) {
       teamB: "",
       overs: "1",
       wickets: "1",
+      ballInOver: "6",
     },
   });
 
@@ -95,11 +102,12 @@ export function CreateMatchForm({ teams }: { teams: team[] }) {
       }
       const teamIdA = teams.find((team) => team.teamName === values.teamA)?._id;
       const teamIdB = teams.find((team) => team.teamName === values.teamB)?._id;
-      const res = await createMatch({
+      await createMatch({
         teamIdA: teamIdA || "",
         teamIdB: teamIdB || "",
         overs: parseInt(values.overs, 10),
         wickets: parseInt(values.wickets, 10),
+        ballInOver: parseInt(values.ballInOver, 10),
         toss: false,
       });
     } catch (e: any) {
@@ -212,6 +220,19 @@ export function CreateMatchForm({ teams }: { teams: team[] }) {
                   <FormLabel>Wickets</FormLabel>
                   <FormControl>
                     <Input type="number" {...field} defaultValue={"1"} />
+                  </FormControl>
+                  <FormMessage />
+                </FormItem>
+              )}
+            />
+            <FormField
+              control={form.control}
+              name="ballInOver"
+              render={({ field }) => (
+                <FormItem>
+                  <FormLabel>Balls in Over</FormLabel>
+                  <FormControl>
+                    <Input type="number" {...field} defaultValue={"6"} />
                   </FormControl>
                   <FormMessage />
                 </FormItem>

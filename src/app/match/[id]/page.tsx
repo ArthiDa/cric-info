@@ -19,9 +19,8 @@ export default async function MatchAvsB({
 }) {
   const matchDetails = await getMatch(params.id);
   if (!matchDetails.success) {
-    return <div>Failed to load match</div>;
+    return <>Failed to load match</>;
   }
-
   const teamNames = {
     teamA: matchDetails.match.teamIdA.teamName,
     teamB: matchDetails.match.teamIdB.teamName,

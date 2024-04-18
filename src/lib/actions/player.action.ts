@@ -25,3 +25,15 @@ export async function createPlayer(params: CreatePlayerParams) {
     return { success: false, error: error.message };
   }
 }
+
+export async function getPlayersWithTeamId(teamId: string) {
+  await connectToDatabase();
+
+  try {
+    // Get all players for a team
+    const players: player[] = await PlayerModel.find({ team: teamId });
+    return { success: true, players };
+  } catch (error: any) {
+    return { success: false, error: error.message };
+  }
+}

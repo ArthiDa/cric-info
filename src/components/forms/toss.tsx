@@ -73,6 +73,7 @@ export function Toss({
             battingTeamId,
             bowlingTeamId,
             status: "live",
+            inningsNumber: 1,
           }),
         ]);
       } catch (e) {

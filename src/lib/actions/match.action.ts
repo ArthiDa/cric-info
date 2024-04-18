@@ -13,17 +13,24 @@ export interface CreateMatchParams {
   teamIdB: string;
   overs: number;
   wickets: number;
+  ballInOver: number;
   toss: boolean;
 }
 
 export async function createMatch(params: CreateMatchParams) {
   await connectToDatabase();
-  const { teamIdA, teamIdB, overs, wickets } = params;
+  const { teamIdA, teamIdB, overs, wickets, ballInOver } = params;
   let id: string;
   let success: boolean;
   try {
     // Create a new match
-    const match = new MatchModel({ teamIdA, teamIdB, overs, wickets });
+    const match = new MatchModel({
+      teamIdA,
+      teamIdB,
+      overs,
+      wickets,
+      ballInOver,
+    });
     // Save the match to the database
     await match.save();
     // make the id to be a string
@@ -31,10 +38,8 @@ export async function createMatch(params: CreateMatchParams) {
     success = true;
   } catch (error: any) {
     id = "";
-    success = false;
-  }
-  if (!success) {
-    return { success };
+    // return the error so that it will be act as an exception error
+    return { success: false, error: error.message };
   }
   revalidatePath(`/match/${id}`);
   redirect(`/match/${id}`);
