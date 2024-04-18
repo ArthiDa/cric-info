@@ -32,8 +32,6 @@ export async function getTeams() {
   try {
     // Get all teams
     const teams: team[] = await TeamModel.find();
-
-    revalidatePath("/");
     return { success: true, teams };
   } catch (error: any) {
     return { success: false, error: error.message };
