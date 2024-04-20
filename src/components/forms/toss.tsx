@@ -16,8 +16,7 @@ import {
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import Image from "next/image";
 import { Avatar, AvatarFallback, AvatarImage } from "../ui/avatar";
-import { updateToss } from "@/lib/actions/match.action";
-import { createInnings } from "@/lib/actions/innings.action";
+import { createInnings, updateToss } from "@/lib/actions";
 
 export function Toss({
   teamNames,
@@ -66,16 +65,11 @@ export function Toss({
         }
       }
       try {
-        const [res1, res2] = await Promise.all([
-          updateToss(matchId, true),
-          createInnings({
-            matchId,
-            battingTeamId,
-            bowlingTeamId,
-            status: "live",
-            inningsNumber: 1,
-          }),
-        ]);
+        await updateToss(matchId);
+        await createInnings(matchId, battingTeamId, bowlingTeamId, 1);
+        setSelectedTeam(null);
+        setSelectedDecision(null);
+        setOpen(false);
       } catch (e) {
         alert("Failed to start match");
       }
@@ -144,7 +138,7 @@ export function Toss({
         </div>
         <div className="flex flex-col sm:flex-row justify-center items-center gap-4 pt-6">
           <Button className="w-1/2 sm:w-auto" onClick={handleSubmit}>
-            Start Scoring
+            Start Match
           </Button>
           <DrawerClose asChild>
             <Button variant="outline" className="w-1/2 sm:w-auto">

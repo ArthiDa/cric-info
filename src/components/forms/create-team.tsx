@@ -27,7 +27,7 @@ import { Label } from "@/components/ui/label";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { set, useForm } from "react-hook-form";
-import { createTeam } from "@/lib/actions/team.action";
+import { createTeam } from "@/lib/actions";
 
 const createTeamFormSchema = z.object({
   teamName: z
@@ -58,21 +58,12 @@ export function CreateTeamForm() {
     },
   });
 
-  // 2. Define a submit handler.
   async function onSubmit(values: z.infer<typeof createTeamFormSchema>) {
-    // Do something with the form values.
-    // ✅ This will be type-safe and validated.
-    console.log(values);
-
-    // Call the createTeam function
-    const res = await createTeam(values);
-
-    if (res.success) {
-      alert("Team created successfully");
+    try {
+      await createTeam(values.teamName, values.teamColor);
       form.reset();
       setOpen(false);
-    } else {
-      console.log(res.error);
+    } catch (error) {
       alert("Failed to create team");
     }
   }

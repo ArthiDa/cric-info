@@ -36,10 +36,8 @@ import { Label } from "@/components/ui/label";
 import { boolean, z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { set, useForm } from "react-hook-form";
-import { team } from "@/lib/definitions";
-import { createMatch } from "@/lib/actions/match.action";
-import { revalidatePath } from "next/cache";
-import { redirect } from "next/navigation";
+import { Team } from "@/lib/definitions";
+import { createMatch } from "@/lib/actions";
 
 const createMatchFormSchema = z.object({
   teamA: z
@@ -81,7 +79,7 @@ const createMatchFormSchema = z.object({
     }),
 });
 
-export function CreateMatchForm({ teams }: { teams: team[] }) {
+export function CreateMatchForm({ teams }: { teams: Team[] }) {
   const [open, setOpen] = useState(false);
   const form = useForm<z.infer<typeof createMatchFormSchema>>({
     resolver: zodResolver(createMatchFormSchema),
@@ -100,16 +98,21 @@ export function CreateMatchForm({ teams }: { teams: team[] }) {
         alert("Team A and Team B should be different");
         return;
       }
-      const teamIdA = teams.find((team) => team.teamName === values.teamA)?._id;
-      const teamIdB = teams.find((team) => team.teamName === values.teamB)?._id;
-      await createMatch({
-        teamIdA: teamIdA || "",
-        teamIdB: teamIdB || "",
-        overs: parseInt(values.overs, 10),
-        wickets: parseInt(values.wickets, 10),
-        ballInOver: parseInt(values.ballInOver, 10),
-        toss: false,
-      });
+      const teamAId = teams.find((team) => team.team_name === values.teamA)?.id;
+      const teamBId = teams.find((team) => team.team_name === values.teamB)?.id;
+      if (teamAId === undefined || teamBId === undefined) {
+        alert("Failed to create match");
+        return;
+      }
+      await createMatch(
+        teamAId,
+        teamBId,
+        parseInt(values.overs),
+        parseInt(values.wickets),
+        parseInt(values.ballInOver)
+      );
+      form.reset();
+      setOpen(false);
     } catch (e: any) {
       alert("Error in creating match");
       return;
@@ -152,11 +155,8 @@ export function CreateMatchForm({ teams }: { teams: team[] }) {
                       <SelectContent>
                         <SelectGroup>
                           {teams.map((team) => (
-                            <SelectItem
-                              key={team.teamName}
-                              value={team.teamName}
-                            >
-                              <Label>{team.teamName}</Label>
+                            <SelectItem key={team.id} value={team.team_name}>
+                              <Label>{team.team_name}</Label>
                             </SelectItem>
                           ))}
                         </SelectGroup>
@@ -184,11 +184,8 @@ export function CreateMatchForm({ teams }: { teams: team[] }) {
                       <SelectContent>
                         <SelectGroup>
                           {teams.map((team) => (
-                            <SelectItem
-                              key={team.teamName}
-                              value={team.teamName}
-                            >
-                              <Label>{team.teamName}</Label>
+                            <SelectItem key={team.id} value={team.team_name}>
+                              <Label>{team.team_name}</Label>
                             </SelectItem>
                           ))}
                         </SelectGroup>

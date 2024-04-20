@@ -36,8 +36,8 @@ import { Label } from "@/components/ui/label";
 import { z } from "zod";
 import { zodResolver } from "@hookform/resolvers/zod";
 import { set, useForm } from "react-hook-form";
-import { team } from "@/lib/definitions";
-import { createPlayer } from "@/lib/actions/player.action";
+import { Team } from "@/lib/definitions";
+import { createPlayer } from "@/lib/actions";
 
 const createPlayerFormSchema = z.object({
   playerName: z
@@ -58,7 +58,7 @@ const createPlayerFormSchema = z.object({
     }),
 });
 
-export function CreatePlayerForm({ teams }: { teams: team[] }) {
+export function CreatePlayerForm({ teams }: { teams: Team[] }) {
   const [open, setOpen] = useState(false);
   const form = useForm<z.infer<typeof createPlayerFormSchema>>({
     resolver: zodResolver(createPlayerFormSchema),
@@ -69,18 +69,19 @@ export function CreatePlayerForm({ teams }: { teams: team[] }) {
   });
 
   async function onSubmit(values: z.infer<typeof createPlayerFormSchema>) {
-    // get team id from team name
-    const teamId =
-      teams.find((team) => team.teamName === values.teamName)?._id || "";
-
-    // create player
-    const res = await createPlayer({ playerName: values.playerName, teamId });
-    if (res.success) {
+    try {
+      // get team id from team name
+      const teamId = teams.find(
+        (team) => team.team_name === values.teamName
+      )?.id;
+      if (teamId === undefined) {
+        alert("Failed to create player");
+        return;
+      }
+      await createPlayer(values.playerName, teamId);
       form.reset();
       setOpen(false);
-      alert("Player created successfully");
-    } else {
-      console.log(res.error);
+    } catch (error) {
       alert("Failed to create player");
     }
   }
@@ -133,8 +134,8 @@ export function CreatePlayerForm({ teams }: { teams: team[] }) {
                     <SelectContent>
                       <SelectGroup>
                         {teams.map((team) => (
-                          <SelectItem key={team._id} value={team.teamName}>
-                            <Label>{team.teamName}</Label>
+                          <SelectItem key={team.id} value={team.team_name}>
+                            <Label>{team.team_name}</Label>
                           </SelectItem>
                         ))}
                       </SelectGroup>
