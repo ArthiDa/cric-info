@@ -67,9 +67,6 @@ export function Toss({
       try {
         await updateToss(matchId);
         await createInnings(matchId, battingTeamId, bowlingTeamId, 1);
-        setSelectedTeam(null);
-        setSelectedDecision(null);
-        setOpen(false);
       } catch (e) {
         alert("Failed to start match");
       }

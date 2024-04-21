@@ -95,7 +95,7 @@ export async function createInnings(
     client.release();
   }
   revalidatePath(`/match/${matchId}`);
-  redirect(`/match/${matchId}/scoring`);
+  // redirect(`/match/${matchId}/scoring`);
 }
 
 export async function updateToss(matchId: string) {

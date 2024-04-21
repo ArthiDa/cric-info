@@ -9,7 +9,12 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table";
-import { fetchInningsByMatchId } from "@/lib/data";
+import {
+  fetchCurrentStrikers,
+  fetchInningsByMatchId,
+  fetchPlayersWithTeamId,
+} from "@/lib/data";
+import Scoring from "@/components/forms/scoring";
 
 export default async function page({ params }: { params: { id: string } }) {
   const matchId = params.id;
@@ -18,14 +23,10 @@ export default async function page({ params }: { params: { id: string } }) {
     return <>Failed to load match</>;
   }
 
-  // const [res1, res2] = await Promise.all([
-  //   getPlayersWithTeamId(inningsDetails.battingTeamId._id),
-  //   getPlayersWithTeamId(inningsDetails.bowlingTeamId._id),
-  // ]);
-
-  // const battingTeamPlayers = res1.success ? res1.players : [];
-  // const bowlingTeamPlayers = res2.success ? res2.players : [];
-
+  const [battingTeamPlayers, bowlingTeamPlayers] = await Promise.all([
+    fetchPlayersWithTeamId(inningsDetails.batting_team_id),
+    fetchPlayersWithTeamId(inningsDetails.bowling_team_id),
+  ]);
   // const [r1, r2] = await Promise.all([
   //   await twoStrikers(inningsDetails._id),
   //   await currentBowler(inningsDetails._id),
@@ -118,13 +119,13 @@ export default async function page({ params }: { params: { id: string } }) {
         ) : null}
       </div>
 
-      {/* <Scoring
+      <Scoring
         inningsDetails={inningsDetails}
-        battingTeamPlayers={battingTeamPlayers ?? []}
-        bowlingTeamPlayers={bowlingTeamPlayers ?? []}
-        strikers={strikers ?? []}
-        bowler={bowler ?? null}
-      /> */}
+        battingTeamPlayers={battingTeamPlayers || []}
+        bowlingTeamPlayers={bowlingTeamPlayers || []}
+        strikers={[]}
+        bowler={null}
+      />
     </div>
   );
 }

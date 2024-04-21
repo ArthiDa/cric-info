@@ -21,6 +21,11 @@ export type Match = {
   toss: boolean;
 };
 
+export type MatchWithTeams = Match & {
+  teama_name: string;
+  teamb_name: string;
+};
+
 export type Innings = {
   id: string;
   match_id: string;
@@ -38,11 +43,6 @@ export type Innings = {
   strikerb_id: string;
 };
 
-export type MatchWithTeams = Match & {
-  teama_name: string;
-  teamb_name: string;
-};
-
 export type InningsWithMatchNTeams = Innings & {
   match_overs: number;
   match_wickets: number;
@@ -51,26 +51,33 @@ export type InningsWithMatchNTeams = Innings & {
   bowling_team: string;
 };
 
-// [
-//   {
-//     id: 'f9ead714-7d79-4d2f-b4a5-02cfe9c036b1',
-//     match_id: 'a24f2715-9f10-40f8-8047-46e15a6b30b5',
-//     batting_team_id: '410544b2-4001-4271-9855-fec4b6a6442a',
-//     bowling_team_id: '5f2d94df-e5a8-4f58-8d76-83ff876cdacb',
-//     status: 'Upcoming',
-//     innings_number: 1,
-//     runs: 0,
-//     wickets: 0,
-//     balls: 0,
-//     extras: 0,
-//     target: null,
-//     bowler_id: null,
-//     strikera_id: null,
-//     strikerb_id: null,
-//     match_overs: 1,
-//     match_wickets: 1,
-//     ball_in_over: 6,
-//     batting_team: 'Bangladesh',
-//     bowling_team: 'Australia'
-//   }
-// ]
+export type BattingScores = {
+  id: string;
+  innings_id: string;
+  player_id: string;
+  runs: number;
+  balls: number;
+  fours: number;
+  sixes: number;
+  is_out: boolean;
+  out_type: string;
+};
+
+export type BattingScoresWithPlayer = BattingScores & {
+  player_name: string;
+};
+
+export type BowlingScores = {
+  id: string;
+  innings_id: string;
+  player_id: string;
+  overs: number;
+  runs: number;
+  wickets: number;
+  balls: number;
+  maidens: number;
+};
+
+export type BowlingScoresWithPlayer = BowlingScores & {
+  player_name: string;
+};

@@ -111,8 +111,6 @@ export function CreateMatchForm({ teams }: { teams: Team[] }) {
         parseInt(values.wickets),
         parseInt(values.ballInOver)
       );
-      form.reset();
-      setOpen(false);
     } catch (e: any) {
       alert("Error in creating match");
       return;
