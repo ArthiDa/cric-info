@@ -10,11 +10,40 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import {
+  fetchCurrentBowler,
   fetchCurrentStrikers,
   fetchInningsByMatchId,
   fetchPlayersWithTeamId,
 } from "@/lib/data";
 import Scoring from "@/components/forms/scoring";
+import { InningsWithMatchNTeams } from "@/lib/definitions";
+
+function getCurrentRunRate(inningsDetails: InningsWithMatchNTeams) {
+  const remBalls = inningsDetails.balls % inningsDetails.ball_in_over;
+  const totalOvers = Math.floor(
+    inningsDetails.balls / inningsDetails.ball_in_over
+  );
+  const crr =
+    inningsDetails.runs && totalOvers + remBalls
+      ? (
+          inningsDetails.runs /
+          (totalOvers + remBalls / inningsDetails.ball_in_over)
+        ).toFixed(2)
+      : 0.0;
+  return crr;
+}
+
+function getRequiredRunRate(inningsDetails: InningsWithMatchNTeams) {
+  const remBallsToWin =
+    inningsDetails.match_overs * inningsDetails.ball_in_over -
+    inningsDetails.balls;
+  const remOversToWin = Math.floor(remBallsToWin / inningsDetails.ball_in_over);
+  const rem =
+    (remBallsToWin % inningsDetails.ball_in_over) / inningsDetails.ball_in_over;
+  const need = inningsDetails.target - inningsDetails.runs;
+  const rr = need ? (need / (remOversToWin + rem)).toFixed(2) : "0.0";
+  return rr;
+}
 
 export default async function page({ params }: { params: { id: string } }) {
   const matchId = params.id;
@@ -27,37 +56,11 @@ export default async function page({ params }: { params: { id: string } }) {
     fetchPlayersWithTeamId(inningsDetails.batting_team_id),
     fetchPlayersWithTeamId(inningsDetails.bowling_team_id),
   ]);
-  // const [r1, r2] = await Promise.all([
-  //   await twoStrikers(inningsDetails._id),
-  //   await currentBowler(inningsDetails._id),
-  // ]);
-  // const strikers: battingScorecard[] = r1.success ? r1.strikers ?? [] : [];
-  // const bowler: bowlingScorecard | null = r2.success ? r2.bowler ?? null : null;
 
-  const remBalls = inningsDetails.balls % inningsDetails.ball_in_over;
-  const totalOvers = Math.floor(
-    inningsDetails.balls / inningsDetails.ball_in_over
-  );
-  const crr = (
-    inningsDetails.runs /
-    (totalOvers + remBalls / inningsDetails.ball_in_over)
-  ).toFixed(2);
-
-  let remOversToWin;
-  let rr;
-  let remBallsToWin;
-  let need;
-  if (inningsDetails.innings_number === 2) {
-    remBallsToWin =
-      inningsDetails.match_overs * inningsDetails.ball_in_over -
-      inningsDetails.balls;
-    remOversToWin = Math.floor(remBallsToWin / inningsDetails.ball_in_over);
-    const rem =
-      (remBallsToWin % inningsDetails.ball_in_over) /
-      inningsDetails.ball_in_over;
-    need = inningsDetails.target - inningsDetails.runs;
-    rr = (need / (remOversToWin + rem)).toFixed(2);
-  }
+  const [currentStrikers, currentBowler] = await Promise.all([
+    fetchCurrentStrikers(inningsDetails.id),
+    fetchCurrentBowler(inningsDetails.id),
+  ]);
 
   return (
     <div className="mx-2 pt-5 divide-y-2 flex flex-col gap-4 my-2">
@@ -95,13 +98,16 @@ export default async function page({ params }: { params: { id: string } }) {
                 0.0
               ) : (
                 <>
-                  {totalOvers}.{remBalls}
+                  {Math.floor(
+                    inningsDetails.balls / inningsDetails.ball_in_over
+                  )}
+                  .{inningsDetails.balls % inningsDetails.ball_in_over}
                 </>
               )}
             </span>
           </p>
           <p>
-            CRR - <span>{inningsDetails.balls === 0 ? 0.0 : crr}</span>
+            CRR - <span>{getCurrentRunRate(inningsDetails)}</span>
           </p>
         </div>
         {inningsDetails.innings_number === 2 ? (
@@ -110,10 +116,10 @@ export default async function page({ params }: { params: { id: string } }) {
               Target - <span>{inningsDetails.target}</span>
             </p>
             <p>
-              Need - <span>{need}</span>
+              Need - <span>{inningsDetails.target - inningsDetails.runs}</span>
             </p>
             <p>
-              RR - <span>{inningsDetails.balls === 0 ? 0.0 : rr}</span>
+              RR - <span>{getRequiredRunRate(inningsDetails)}</span>
             </p>
           </div>
         ) : null}
@@ -121,10 +127,10 @@ export default async function page({ params }: { params: { id: string } }) {
 
       <Scoring
         inningsDetails={inningsDetails}
-        battingTeamPlayers={battingTeamPlayers || []}
-        bowlingTeamPlayers={bowlingTeamPlayers || []}
-        strikers={[]}
-        bowler={null}
+        battingTeamPlayers={battingTeamPlayers ? battingTeamPlayers : []}
+        bowlingTeamPlayers={bowlingTeamPlayers ? bowlingTeamPlayers : []}
+        strikers={currentStrikers ? currentStrikers : []}
+        bowler={currentBowler ? currentBowler : null}
       />
     </div>
   );

@@ -20,6 +20,22 @@ import {
   Player,
 } from "@/lib/definitions";
 
+function getEconomy(
+  bowler: BowlingScoresWithPlayer,
+  inningsDetails: InningsWithMatchNTeams
+) {
+  const ballInOver = inningsDetails.ball_in_over;
+  const totalOvers = Math.floor(bowler.balls / ballInOver);
+  const totalBalls = bowler.balls;
+  const remBalls = totalBalls % ballInOver;
+  const totalRuns = bowler.runs;
+  const eco =
+    totalRuns > 0
+      ? (totalRuns / (totalOvers + remBalls / ballInOver)).toFixed(2)
+      : "0.0";
+  return eco;
+}
+
 export default function Scoring({
   inningsDetails,
   battingTeamPlayers,
@@ -33,20 +49,6 @@ export default function Scoring({
   strikers: BattingScoresWithPlayer[];
   bowler: BowlingScoresWithPlayer | null;
 }) {
-  let ballInOver;
-  let totalOvers;
-  let totalBalls;
-  let remBalls;
-  let totalRuns;
-  let eco = "0.0";
-  if (bowler && inningsDetails) {
-    ballInOver = inningsDetails.ball_in_over;
-    totalOvers = Math.floor(bowler.balls / ballInOver);
-    totalBalls = bowler.balls;
-    remBalls = totalBalls % ballInOver;
-    totalRuns = bowler.runs;
-    eco = (totalRuns / (totalOvers + remBalls / ballInOver)).toFixed(2);
-  }
   const [selectedStriker, setSelectedStriker] =
     useState<BattingScoresWithPlayer | null>(null);
 
@@ -171,28 +173,31 @@ export default function Scoring({
                   {bowler.player_name}
                 </TableCell>
                 <TableCell>
-                  {totalOvers}.{remBalls}
+                  {Math.floor(bowler.balls / inningsDetails.ball_in_over)}.
+                  {bowler.balls % inningsDetails.ball_in_over}
                 </TableCell>
                 <TableCell>{bowler.maidens}</TableCell>
                 <TableCell>{bowler.runs}</TableCell>
                 <TableCell>{bowler.wickets}</TableCell>
-                <TableCell>{eco}</TableCell>
+                <TableCell>{getEconomy(bowler, inningsDetails)}</TableCell>
               </TableRow>
             </TableBody>
           )}
         </Table>
       </div>
-      {strikers.length === 0 && !bowler ? (
+      {!strikers.length && !bowler ? (
         <>
           <div className="pt-4 flex justify-center items-center gap-2">
             <SelectBatsman
               batsman={battingTeamPlayers || []}
               flag={true}
               inningsId={inningsDetails.id}
+              matchId={inningsDetails.match_id}
             />
             <SelectBowler
               bowlers={bowlingTeamPlayers || []}
               inningsId={inningsDetails.id}
+              matchId={inningsDetails.match_id}
             />
           </div>
         </>
@@ -202,6 +207,7 @@ export default function Scoring({
             batsman={battingTeamPlayers || []}
             flag={true}
             inningsId={inningsDetails.id}
+            matchId={inningsDetails.match_id}
           />
         </div>
       ) : !bowler ? (
@@ -209,6 +215,7 @@ export default function Scoring({
           <SelectBowler
             bowlers={bowlingTeamPlayers || []}
             inningsId={inningsDetails.id}
+            matchId={inningsDetails.match_id}
           />
         </div>
       ) : (

@@ -22,15 +22,18 @@ import {
 } from "@/components/ui/table";
 import { Label } from "../ui/label";
 import { Player } from "@/lib/definitions";
+import { updateStrikers } from "@/lib/actions";
 
 export default function SelectBatsman({
   batsman,
   flag,
   inningsId,
+  matchId,
 }: {
   batsman: Player[];
   flag: boolean;
   inningsId: string;
+  matchId: string;
 }) {
   const [open, setOpen] = useState(false);
   const [selectedPlayers, setSelectedPlayers] = useState<Player[]>([]);
@@ -55,18 +58,15 @@ export default function SelectBatsman({
 
   const handleSubmit = async () => {
     if (selectedPlayers.length > 0) {
-      console.log(selectedPlayers);
-      // try {
-      //   for (let i = 0; i < selectedPlayers.length; i++) {
-      //     await createBattingScorecard({
-      //       inningsId,
-      //       playerId: selectedPlayers[i]._id,
-      //     });
-      //   }
-      // } catch (err) {
-      //   alert("Failed to create batting scorecard");
-      // }
-      // setOpen(false);
+      try {
+        const strikeraId = selectedPlayers[0].id;
+        const strikerbId = selectedPlayers[1]?.id;
+        await updateStrikers(strikeraId, strikerbId, inningsId, matchId);
+        setSelectedPlayers([]);
+        setOpen(false);
+      } catch (error) {
+        alert("Error in selecting batsman");
+      }
     } else {
       if (flag) {
         alert("Please select two players");

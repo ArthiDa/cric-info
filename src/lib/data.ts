@@ -2,6 +2,8 @@ import conn from "./db";
 import { unstable_noStore as noStore } from "next/cache";
 import {
   BattingScoresWithPlayer,
+  BowlingScores,
+  BowlingScoresWithPlayer,
   InningsWithMatchNTeams,
   Match,
   MatchWithTeams,
@@ -164,6 +166,37 @@ export async function fetchCurrentStrikers(inningsId: string) {
   } catch (error) {
     console.error(error);
     throw new Error("Failed to fetch current strikers");
+  } finally {
+    client.release();
+  }
+}
+
+export async function fetchCurrentBowler(inningsId: string) {
+  noStore();
+  const client = await conn.connect();
+  if (!client) {
+    console.error("Failed to connect to database");
+    return;
+  }
+
+  try {
+    // check first if bowler and strikers are available in the innings table itself
+    const res = await client.query("SELECT * FROM innings WHERE id = $1", [
+      inningsId,
+    ]);
+    const innings = res.rows[0] as InningsWithMatchNTeams;
+    if (innings.bowler_id) {
+      // fetch bowler from bowling_scores table with player information from players table for the current innings
+      const res = await client.query(
+        "SELECT bowling_scores.*, players.player_name FROM bowling_scores INNER JOIN players ON bowling_scores.player_id = players.id WHERE innings_id = $1 AND player_id = $2",
+        [inningsId, innings.bowler_id]
+      );
+      return res.rows[0] as BowlingScoresWithPlayer;
+    }
+    return null;
+  } catch (error) {
+    console.error(error);
+    throw new Error("Failed to fetch current bowler");
   } finally {
     client.release();
   }

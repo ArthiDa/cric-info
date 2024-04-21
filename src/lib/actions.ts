@@ -95,7 +95,7 @@ export async function createInnings(
     client.release();
   }
   revalidatePath(`/match/${matchId}`);
-  // redirect(`/match/${matchId}/scoring`);
+  redirect(`/match/${matchId}/scoring`);
 }
 
 export async function updateToss(matchId: string) {
@@ -115,4 +115,86 @@ export async function updateToss(matchId: string) {
     client.release();
   }
   revalidatePath(`/match/${matchId}`);
+}
+
+export async function updateStrikers(
+  strikera_id: string,
+  strikerb_id: string,
+  innings_id: string,
+  matchId: string
+) {
+  const client = await conn.connect();
+  if (!client) {
+    console.error("Failed to connect to database");
+    return;
+  }
+  try {
+    await client.query(
+      "UPDATE innings SET strikera_id = $1, strikerb_id = $2 where innings.id = $3",
+      [strikera_id, strikerb_id, innings_id]
+    );
+    // check strikera_id exist in batting_scores table if not then create a new record
+    const strikerA = await client.query(
+      "SELECT * FROM batting_scores WHERE player_id = $1 AND innings_id = $2",
+      [strikera_id, innings_id]
+    );
+    if (strikerA.rowCount === 0) {
+      await client.query(
+        "INSERT INTO batting_scores (player_id, innings_id) VALUES ($1, $2)",
+        [strikera_id, innings_id]
+      );
+    }
+    // check strikerb_id exist in batting_scores table if not then create a new record
+    const strikerB = await client.query(
+      "SELECT * FROM batting_scores WHERE player_id = $1 AND innings_id = $2",
+      [strikerb_id, innings_id]
+    );
+    if (strikerB.rowCount === 0) {
+      await client.query(
+        "INSERT INTO batting_scores (player_id, innings_id) VALUES ($1, $2)",
+        [strikerb_id, innings_id]
+      );
+    }
+  } catch (error) {
+    console.error(error);
+    throw new Error("Failed to update strikers");
+  } finally {
+    client.release();
+  }
+  revalidatePath(`/match/${matchId}/scoring`);
+}
+
+export async function updateBowler(
+  bowler_id: string,
+  innings_id: string,
+  match_id: string
+) {
+  const client = await conn.connect();
+  if (!client) {
+    console.error("Failed to connect to database");
+    return;
+  }
+  try {
+    await client.query(
+      "UPDATE innings SET bowler_id = $1 where innings.id = $2",
+      [bowler_id, innings_id]
+    );
+    // check bowler_id exist in bowling_scores table if not then create a new record
+    const bowler = await client.query(
+      "SELECT * FROM bowling_scores WHERE player_id = $1 AND innings_id = $2",
+      [bowler_id, innings_id]
+    );
+    if (bowler.rowCount === 0) {
+      await client.query(
+        "INSERT INTO bowling_scores (player_id, innings_id) VALUES ($1, $2)",
+        [bowler_id, innings_id]
+      );
+    }
+  } catch (error) {
+    console.error(error);
+    throw new Error("Failed to update bowler");
+  } finally {
+    client.release();
+  }
+  revalidatePath(`/match/${match_id}/scoring`);
 }

@@ -22,13 +22,16 @@ import {
 } from "@/components/ui/table";
 import { Label } from "../ui/label";
 import { Player } from "@/lib/definitions";
+import { updateBowler } from "@/lib/actions";
 
 export default function SelectBowler({
   bowlers,
   inningsId,
+  matchId,
 }: {
   bowlers: Player[];
   inningsId: string;
+  matchId: string;
 }) {
   const [open, setOpen] = useState(false);
   const [selectedPlayer, setSelectedPlayer] = useState<Player | null>(null);
@@ -40,12 +43,9 @@ export default function SelectBowler({
   const handleSubmit = async () => {
     if (selectedPlayer) {
       try {
-        console.log("Selected Bowler: ", selectedPlayer);
-        // await createBowlingScorecard({
-        //   inningsId,
-        //   playerId: selectedPlayer._id,
-        // });
-        // setOpen(false);
+        await updateBowler(selectedPlayer.id, inningsId, matchId);
+        setSelectedPlayer(null);
+        setOpen(false);
       } catch (error) {
         alert("Error in selecting bowler");
       }
