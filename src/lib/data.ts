@@ -4,12 +4,14 @@ import {
   BattingScoresWithPlayer,
   BowlingScores,
   BowlingScoresWithPlayer,
+  InningsBalls,
   InningsWithMatchNTeams,
   Match,
   MatchWithTeams,
   Player,
   Team,
 } from "./definitions";
+import { create } from "domain";
 
 export async function fetchTeams() {
   noStore();
@@ -197,6 +199,33 @@ export async function fetchCurrentBowler(inningsId: string) {
   } catch (error) {
     console.error(error);
     throw new Error("Failed to fetch current bowler");
+  } finally {
+    client.release();
+  }
+}
+
+export async function fetchLastSixBalls(inningsId: string) {
+  noStore();
+  const client = await conn.connect();
+  if (!client) {
+    console.error("Failed to connect to database");
+    return;
+  }
+
+  try {
+    // fetch last six balls from innings_balls table with inningsId and order by created_at DESC
+    const res = await client.query(
+      "SELECT * FROM innings_balls WHERE innings_id = $1 ORDER BY created_at DESC LIMIT 6",
+      [inningsId]
+    );
+    // sort the balls in ascending order of ball_number
+    res.rows.sort(
+      (a: InningsBalls, b: InningsBalls) => a.ball_number - b.ball_number
+    );
+    return res.rows as InningsBalls[];
+  } catch (error) {
+    console.error(error);
+    throw new Error("Failed to fetch last six balls");
   } finally {
     client.release();
   }

@@ -168,6 +168,36 @@ async function seedBowlingScores(client) {
   }
 }
 
+async function inningsBall(client) {
+  try {
+    const createTable = await client.query(`
+    CREATE TABLE IF NOT EXISTS innings_balls (
+      id UUID DEFAULT uuid_generate_v4() PRIMARY KEY,
+      innings_id UUID NOT NULL,
+      over_number INT NOT NULL,
+      ball_number INT NOT NULL,
+      runs INT DEFAULT 0,
+      is_wicket BOOLEAN DEFAULT FALSE,
+      wicket_type VARCHAR(255),
+      is_six BOOLEAN DEFAULT FALSE,
+      is_four BOOLEAN DEFAULT FALSE,
+      batsman_id UUID NOT NULL,
+      bowler_id UUID NOT NULL,
+      extras INT DEFAULT 0,
+      created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+      FOREIGN KEY (innings_id) REFERENCES innings (id),
+      FOREIGN KEY (batsman_id) REFERENCES players (id),
+      FOREIGN KEY (bowler_id) REFERENCES players (id)
+    );
+  `);
+
+    console.log(`Created 'inningsBall' table`);
+  } catch (error) {
+    console.error("Error seeding innings ball:", error);
+    throw error;
+  }
+}
+
 async function main() {
   const conn = new Pool({
     connectionString: process.env.POSTGRES_URL_RENDER,
@@ -175,12 +205,13 @@ async function main() {
   });
 
   const client = await conn.connect();
-  await seedTeams(client);
-  await seedPlayers(client);
-  await seedMatches(client);
-  await seedInnings(client);
-  await seedBattingScores(client);
-  await seedBowlingScores(client);
+  // await seedTeams(client);
+  // await seedPlayers(client);
+  // await seedMatches(client);
+  // await seedInnings(client);
+  // await seedBattingScores(client);
+  // await seedBowlingScores(client);
+  // await inningsBall(client);
 
   await client.release();
   await conn.end();

@@ -13,6 +13,7 @@ import {
   fetchCurrentBowler,
   fetchCurrentStrikers,
   fetchInningsByMatchId,
+  fetchLastSixBalls,
   fetchPlayersWithTeamId,
 } from "@/lib/data";
 import Scoring from "@/components/forms/scoring";
@@ -51,6 +52,7 @@ export default async function page({ params }: { params: { id: string } }) {
   if (inningsDetails === undefined) {
     return <>Failed to load match</>;
   }
+  const lastSixBalls = await fetchLastSixBalls(inningsDetails.id);
 
   const [battingTeamPlayers, bowlingTeamPlayers] = await Promise.all([
     fetchPlayersWithTeamId(inningsDetails.batting_team_id),
@@ -131,6 +133,7 @@ export default async function page({ params }: { params: { id: string } }) {
         bowlingTeamPlayers={bowlingTeamPlayers ? bowlingTeamPlayers : []}
         strikers={currentStrikers ? currentStrikers : []}
         bowler={currentBowler ? currentBowler : null}
+        lastSixBalls={lastSixBalls ? lastSixBalls : []}
       />
     </div>
   );

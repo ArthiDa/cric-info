@@ -2,6 +2,7 @@
 import { revalidatePath } from "next/cache";
 import conn from "./db";
 import { redirect } from "next/navigation";
+import { InningsWithMatchNTeams } from "./definitions";
 
 export async function createTeam(teamName: string, teamColor: string) {
   const client = await conn.connect();
@@ -197,4 +198,67 @@ export async function updateBowler(
     client.release();
   }
   revalidatePath(`/match/${match_id}/scoring`);
+}
+
+export async function updateBasicScore(
+  score: number,
+  is_four: boolean,
+  is_six: boolean,
+  batsman_id: string,
+  bowler_id: string,
+  inningsDetails: InningsWithMatchNTeams,
+  innings_first_ball: boolean
+) {
+  const client = await conn.connect();
+  if (!client) {
+    console.error("Failed to connect to database");
+    return;
+  }
+  try {
+    if (innings_first_ball) {
+      // update innings status to live
+      await client.query("UPDATE innings SET status = 'Live' WHERE id = $1", [
+        inningsDetails.id,
+      ]);
+    }
+    // 1. update innings runs and balls
+    await client.query(
+      "UPDATE innings SET runs = runs + $1, balls = balls + 1 WHERE id = $2",
+      [score, inningsDetails.id]
+    );
+    // 2. update batsman runs, balls, fours, sixes
+    await client.query(
+      "UPDATE batting_scores SET runs = runs + $1, balls = balls + 1, fours = fours + $2, sixes = sixes + $3 WHERE player_id = $4 AND innings_id = $5",
+      [score, is_four ? 1 : 0, is_six ? 1 : 0, batsman_id, inningsDetails.id]
+    );
+    // 3. update bowler runs, balls
+    await client.query(
+      "UPDATE bowling_scores SET runs = runs + $1, balls = balls + 1 WHERE player_id = $2 AND innings_id = $3",
+      [score, bowler_id, inningsDetails.id]
+    );
+
+    // 4. create a new record in innings_balls table
+    const overNumber = Math.floor(
+      inningsDetails.balls / inningsDetails.ball_in_over
+    );
+    await client.query(
+      "INSERT INTO innings_balls (over_number, ball_number, runs, is_six, is_four, batsman_id, bowler_id, innings_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+      [
+        overNumber,
+        inningsDetails.balls,
+        score,
+        is_six,
+        is_four,
+        batsman_id,
+        bowler_id,
+        inningsDetails.id,
+      ]
+    );
+  } catch (error) {
+    console.error(error);
+    throw new Error("Failed to update basic score");
+  } finally {
+    client.release();
+  }
+  revalidatePath(`/match/${inningsDetails.match_id}/scoring`);
 }

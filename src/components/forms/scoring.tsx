@@ -16,9 +16,11 @@ import SelectBowler from "./select-bowler";
 import {
   BattingScoresWithPlayer,
   BowlingScoresWithPlayer,
+  InningsBalls,
   InningsWithMatchNTeams,
   Player,
 } from "@/lib/definitions";
+import { updateBasicScore } from "@/lib/actions";
 
 function getEconomy(
   bowler: BowlingScoresWithPlayer,
@@ -42,42 +44,40 @@ export default function Scoring({
   bowlingTeamPlayers,
   strikers,
   bowler,
+  lastSixBalls,
 }: {
   inningsDetails: InningsWithMatchNTeams;
   battingTeamPlayers: Player[];
   bowlingTeamPlayers: Player[];
   strikers: BattingScoresWithPlayer[];
   bowler: BowlingScoresWithPlayer | null;
+  lastSixBalls: InningsBalls[];
 }) {
   const [selectedStriker, setSelectedStriker] =
     useState<BattingScoresWithPlayer | null>(null);
 
   const handleScoreUpdate = async (score: number) => {
     // Handle the score update here
-    console.log(`Score updated: ${score}`, selectedStriker, inningsDetails);
     if (selectedStriker && bowler && inningsDetails) {
       // Batsman score update
       const isFour = score === 4;
       const isSix = score === 6;
-      // // Bowler score update
-      // const updateBowlerScore = await updateBowlerRun(
-      //   inningsDetails._id,
-      //   bowler?.playerId._id,
-      //   score
-      // );
-      // if (!updateBowlerScore.success) {
-      //   alert("Error updating bowler score");
-      // }
-
-      // const updateInningsScore = await updateInningsRuns(
-      //   inningsDetails._id,
-      //   score
-      // );
-      // if (!updateInningsScore.success) {
-      //   alert("Error updating innings score");
-      // }
-      // Reset the selected striker
-      setSelectedStriker(null);
+      const inningsFirstBall = inningsDetails.balls === 0;
+      try {
+        await updateBasicScore(
+          score,
+          isFour,
+          isSix,
+          selectedStriker.player_id,
+          bowler.player_id,
+          inningsDetails,
+          inningsFirstBall
+        );
+        // Reset the selected striker
+        setSelectedStriker(null);
+      } catch (error) {
+        alert("Failed to update score");
+      }
     }
   };
   return (
@@ -223,20 +223,28 @@ export default function Scoring({
           <div className="pt-2 flex justify-between items-center">
             <div>
               <p>
-                <span className="border-2 rounded-full p-2 ml-3">-</span>
-                <span className="border-2 rounded-full p-2 ml-3">6</span>
-                <span className="border-2 rounded-full p-2 ml-3">3</span>
-                <span className="border-2 rounded-full p-2 ml-3">w</span>
-                <span className="border-2 rounded-full p-2 ml-3">e10</span>
-                <span className="border-2 rounded-full p-2 ml-3">1</span>
+                {lastSixBalls.map((ball, id) => (
+                  <span
+                    key={id}
+                    className={`border-2 rounded-full p-2 mr-3 ${
+                      ball.is_six
+                        ? "bg-green-500"
+                        : ball.is_four
+                        ? "bg-blue-500"
+                        : "bg-gray-500"
+                    }`}
+                  >
+                    {ball.is_wicket ? "W" : ball.runs ? ball.runs : 0}
+                  </span>
+                ))}
               </p>
             </div>
-            <div className="flex justify-end">
+            <div>
               <Button variant={"outline"}>Over</Button>
             </div>
           </div>
           <div className="pt-2">
-            <div className="grid grid-cols-7 gap-2">
+            <div className="grid grid-cols-4 gap-2">
               <div>
                 <Button
                   variant={"outline"}
@@ -300,6 +308,9 @@ export default function Scoring({
                   0
                 </Button>
               </div>
+              <div>
+                <Button variant={"outline"}>Out</Button>
+              </div>
             </div>
             <div className="flex justify-between items-center pt-2">
               <div className="flex">
@@ -310,11 +321,6 @@ export default function Scoring({
                   <Button variant={"outline"} className="mx-7">
                     Bat+Ext
                   </Button>
-                </div>
-              </div>
-              <div className="flex">
-                <div>
-                  <Button variant={"outline"}>Out</Button>
                 </div>
                 <div>
                   <Button variant={"outline"} className="ml-7">

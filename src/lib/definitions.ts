@@ -81,3 +81,19 @@ export type BowlingScores = {
 export type BowlingScoresWithPlayer = BowlingScores & {
   player_name: string;
 };
+
+export type InningsBalls = {
+  id: string;
+  innings_id: string;
+  over_number: number;
+  ball_number: number;
+  runs: number;
+  is_wicket: boolean;
+  wicket_type: string;
+  is_six: boolean;
+  is_four: boolean;
+  batsman_id: string;
+  bowler_id: string;
+  extras: number;
+  created_at: Date;
+};
