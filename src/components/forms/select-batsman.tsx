@@ -21,19 +21,17 @@ import {
   TableRow,
 } from "@/components/ui/table";
 import { Label } from "../ui/label";
-import { Player } from "@/lib/definitions";
+import { InningsWithMatchNTeams, Player } from "@/lib/definitions";
 import { updateStrikers } from "@/lib/actions";
 
 export default function SelectBatsman({
   batsman,
   flag,
-  inningsId,
-  matchId,
+  inningsDetails,
 }: {
   batsman: Player[];
   flag: boolean;
-  inningsId: string;
-  matchId: string;
+  inningsDetails: InningsWithMatchNTeams;
 }) {
   const [open, setOpen] = useState(false);
   const [selectedPlayers, setSelectedPlayers] = useState<Player[]>([]);
@@ -59,9 +57,31 @@ export default function SelectBatsman({
   const handleSubmit = async () => {
     if (selectedPlayers.length > 0) {
       try {
-        const strikeraId = selectedPlayers[0].id;
-        const strikerbId = selectedPlayers[1]?.id;
-        await updateStrikers(strikeraId, strikerbId, inningsId, matchId);
+        if (flag) {
+          const strikeraId = selectedPlayers[0].id;
+          const strikerbId = selectedPlayers[1].id;
+          await updateStrikers(
+            strikeraId,
+            strikerbId,
+            inningsDetails.id,
+            inningsDetails.match_id
+          );
+        } else {
+          let strikeraId: string;
+          if (inningsDetails.strikera_id) {
+            strikeraId = inningsDetails.strikera_id;
+          } else {
+            strikeraId = inningsDetails.strikerb_id;
+          }
+          const strikerbId = selectedPlayers[0].id;
+          await updateStrikers(
+            strikeraId,
+            strikerbId,
+            inningsDetails.id,
+            inningsDetails.match_id
+          );
+        }
+
         setSelectedPlayers([]);
         setOpen(false);
       } catch (error) {

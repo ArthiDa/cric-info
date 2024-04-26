@@ -20,7 +20,10 @@ import {
   InningsWithMatchNTeams,
   Player,
 } from "@/lib/definitions";
-import { updateBasicScore } from "@/lib/actions";
+import { updateBasicScore, updateOver } from "@/lib/actions";
+import OutTypeForm from "./out-type-form";
+import Extra from "./extra";
+import More from "./more";
 
 function getEconomy(
   bowler: BowlingScoresWithPlayer,
@@ -53,6 +56,8 @@ export default function Scoring({
   bowler: BowlingScoresWithPlayer | null;
   lastSixBalls: InningsBalls[];
 }) {
+  // make an array of dynamic length
+  const nonStriker = Array.from({ length: 2 - strikers.length }, (_, i) => i);
   const [selectedStriker, setSelectedStriker] =
     useState<BattingScoresWithPlayer | null>(null);
 
@@ -80,6 +85,24 @@ export default function Scoring({
       }
     }
   };
+  const handleEndOver = async () => {
+    try {
+      if (!bowler) {
+        throw new Error("No bowler found");
+      }
+      confirm("Are you sure you want to end the over?")
+        ? await updateOver(
+            inningsDetails.id,
+            bowler.id,
+            inningsDetails.match_id
+          )
+        : null;
+    } catch (error) {
+      alert("Failed to end over");
+      return;
+    }
+  };
+  const scores = [1, 2, 3, 4, 5, 6, 0];
   return (
     <>
       <div className="pt-2">
@@ -94,9 +117,35 @@ export default function Scoring({
               <TableHead>SR</TableHead>
             </TableRow>
           </TableHeader>
-          {!strikers.length ? (
-            <TableBody>
-              <TableRow>
+
+          <TableBody>
+            {strikers?.map((striker, id) => (
+              <TableRow
+                key={id}
+                onClick={() => setSelectedStriker(striker)}
+                className={`cursor-pointer ${
+                  selectedStriker?.player_id === striker.player_id
+                    ? "bg-orange-400 hover:bg-orange-400"
+                    : ""
+                }`}
+              >
+                <TableCell className="font-medium">
+                  {striker.player_name}
+                </TableCell>
+                <TableCell>{striker.runs}</TableCell>
+                <TableCell>{striker.balls}</TableCell>
+                <TableCell>{striker.fours}</TableCell>
+                <TableCell>{striker.sixes}</TableCell>
+                <TableCell>
+                  {striker.balls === 0
+                    ? 0.0
+                    : ((striker.runs / striker.balls) * 100).toFixed(2)}
+                </TableCell>
+              </TableRow>
+            ))}
+
+            {nonStriker.map((_, id) => (
+              <TableRow key={id}>
                 <TableCell className="font-medium">-</TableCell>
                 <TableCell>-</TableCell>
                 <TableCell>-</TableCell>
@@ -104,43 +153,8 @@ export default function Scoring({
                 <TableCell>-</TableCell>
                 <TableCell>-</TableCell>
               </TableRow>
-              <TableRow>
-                <TableCell className="font-medium">-</TableCell>
-                <TableCell>-</TableCell>
-                <TableCell>-</TableCell>
-                <TableCell>-</TableCell>
-                <TableCell>-</TableCell>
-                <TableCell>-</TableCell>
-              </TableRow>
-            </TableBody>
-          ) : (
-            <TableBody>
-              {strikers.map((striker, id) => (
-                <TableRow
-                  key={id}
-                  onClick={() => setSelectedStriker(striker)}
-                  className={`cursor-pointer ${
-                    selectedStriker?.player_id === striker.player_id
-                      ? "bg-orange-400 hover:bg-orange-400"
-                      : ""
-                  }`}
-                >
-                  <TableCell className="font-medium">
-                    {striker.player_name}
-                  </TableCell>
-                  <TableCell>{striker.runs}</TableCell>
-                  <TableCell>{striker.balls}</TableCell>
-                  <TableCell>{striker.fours}</TableCell>
-                  <TableCell>{striker.sixes}</TableCell>
-                  <TableCell>
-                    {striker.balls === 0
-                      ? 0.0
-                      : ((striker.runs / striker.balls) * 100).toFixed(2)}
-                  </TableCell>
-                </TableRow>
-              ))}
-            </TableBody>
-          )}
+            ))}
+          </TableBody>
         </Table>
       </div>
       <div>
@@ -149,7 +163,6 @@ export default function Scoring({
             <TableRow>
               <TableHead className="w-[50px]">Bowler</TableHead>
               <TableHead>O</TableHead>
-              <TableHead>M</TableHead>
               <TableHead>R</TableHead>
               <TableHead>W</TableHead>
               <TableHead>Eco</TableHead>
@@ -159,7 +172,6 @@ export default function Scoring({
             <TableBody>
               <TableRow>
                 <TableCell className="font-medium">-</TableCell>
-                <TableCell>-</TableCell>
                 <TableCell>-</TableCell>
                 <TableCell>-</TableCell>
                 <TableCell>-</TableCell>
@@ -176,7 +188,6 @@ export default function Scoring({
                   {Math.floor(bowler.balls / inningsDetails.ball_in_over)}.
                   {bowler.balls % inningsDetails.ball_in_over}
                 </TableCell>
-                <TableCell>{bowler.maidens}</TableCell>
                 <TableCell>{bowler.runs}</TableCell>
                 <TableCell>{bowler.wickets}</TableCell>
                 <TableCell>{getEconomy(bowler, inningsDetails)}</TableCell>
@@ -191,8 +202,7 @@ export default function Scoring({
             <SelectBatsman
               batsman={battingTeamPlayers || []}
               flag={true}
-              inningsId={inningsDetails.id}
-              matchId={inningsDetails.match_id}
+              inningsDetails={inningsDetails}
             />
             <SelectBowler
               bowlers={bowlingTeamPlayers || []}
@@ -201,13 +211,12 @@ export default function Scoring({
             />
           </div>
         </>
-      ) : strikers.length === 0 ? (
+      ) : strikers.length != 2 ? (
         <div className="pt-4 flex justify-center items-center gap-2">
           <SelectBatsman
             batsman={battingTeamPlayers || []}
-            flag={true}
-            inningsId={inningsDetails.id}
-            matchId={inningsDetails.match_id}
+            flag={strikers.length === 1 ? false : true}
+            inningsDetails={inningsDetails}
           />
         </div>
       ) : !bowler ? (
@@ -226,7 +235,7 @@ export default function Scoring({
                 {lastSixBalls.map((ball, id) => (
                   <span
                     key={id}
-                    className={`border-2 rounded-full p-2 mr-3 ${
+                    className={`border-2 rounded-full p-2 mr-2 ${
                       ball.is_six
                         ? "bg-green-500"
                         : ball.is_four
@@ -234,99 +243,61 @@ export default function Scoring({
                         : "bg-gray-500"
                     }`}
                   >
-                    {ball.is_wicket ? "W" : ball.runs ? ball.runs : 0}
+                    {ball.is_wicket
+                      ? ball.runs
+                        ? `${ball.runs}W`
+                        : "W"
+                      : ball.runs
+                      ? ball.runs
+                      : 0}
                   </span>
                 ))}
               </p>
             </div>
             <div>
-              <Button variant={"outline"}>Over</Button>
+              <Button variant={"outline"} onClick={() => handleEndOver()}>
+                Over
+              </Button>
             </div>
           </div>
           <div className="pt-2">
             <div className="grid grid-cols-4 gap-2">
+              {scores.map((score, id) => (
+                <div key={id}>
+                  <Button
+                    variant={"outline"}
+                    onClick={() => handleScoreUpdate(score)}
+                    disabled={!selectedStriker}
+                  >
+                    {score}
+                  </Button>
+                </div>
+              ))}
               <div>
-                <Button
-                  variant={"outline"}
-                  onClick={() => handleScoreUpdate(1)}
-                  disabled={!selectedStriker}
-                >
-                  1
-                </Button>
-              </div>
-              <div>
-                <Button
-                  variant={"outline"}
-                  onClick={() => handleScoreUpdate(2)}
-                  disabled={!selectedStriker}
-                >
-                  2
-                </Button>
-              </div>
-              <div>
-                <Button
-                  variant={"outline"}
-                  onClick={() => handleScoreUpdate(3)}
-                  disabled={!selectedStriker}
-                >
-                  3
-                </Button>
-              </div>
-              <div>
-                <Button
-                  variant={"outline"}
-                  onClick={() => handleScoreUpdate(4)}
-                  disabled={!selectedStriker}
-                >
-                  4
-                </Button>
-              </div>
-              <div>
-                <Button
-                  variant={"outline"}
-                  onClick={() => handleScoreUpdate(5)}
-                  disabled={!selectedStriker}
-                >
-                  5
-                </Button>
-              </div>
-              <div>
-                <Button
-                  variant={"outline"}
-                  onClick={() => handleScoreUpdate(6)}
-                  disabled={!selectedStriker}
-                >
-                  6
-                </Button>
-              </div>
-              <div>
-                <Button
-                  variant={"outline"}
-                  onClick={() => handleScoreUpdate(0)}
-                  disabled={!selectedStriker}
-                >
-                  0
-                </Button>
-              </div>
-              <div>
-                <Button variant={"outline"}>Out</Button>
+                <OutTypeForm
+                  inningDetails={inningsDetails}
+                  striker={selectedStriker ? selectedStriker : null}
+                  bowler={bowler ? bowler : null}
+                  strikers={strikers}
+                />
               </div>
             </div>
-            <div className="flex justify-between items-center pt-2">
-              <div className="flex">
-                <div>
-                  <Button variant={"outline"}>Ext</Button>
-                </div>
-                <div>
-                  <Button variant={"outline"} className="mx-7">
-                    Bat+Ext
-                  </Button>
-                </div>
-                <div>
-                  <Button variant={"outline"} className="ml-7">
-                    Undo
-                  </Button>
-                </div>
+            <div className="flex justify-center items-center pt-2 gap-4">
+              <div>
+                <Extra
+                  inningDetails={inningsDetails}
+                  bowler={bowler ? bowler : null}
+                />
+              </div>
+              <div>
+                <More
+                  inningDetails={inningsDetails}
+                  bowler={bowler ? bowler : null}
+                  strikers={strikers}
+                />
+              </div>
+              <div>
+                <Button variant={"outline"}>Undo</Button>
               </div>
             </div>
           </div>

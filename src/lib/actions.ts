@@ -228,8 +228,15 @@ export async function updateBasicScore(
     );
     // 2. update batsman runs, balls, fours, sixes
     await client.query(
-      "UPDATE batting_scores SET runs = runs + $1, balls = balls + 1, fours = fours + $2, sixes = sixes + $3 WHERE player_id = $4 AND innings_id = $5",
-      [score, is_four ? 1 : 0, is_six ? 1 : 0, batsman_id, inningsDetails.id]
+      "UPDATE batting_scores SET runs = runs + $1, balls = balls + 1, fours = fours + $2, sixes = sixes + $3, bowler_id = $4 WHERE player_id = $5 AND innings_id = $6",
+      [
+        score,
+        is_four ? 1 : 0,
+        is_six ? 1 : 0,
+        bowler_id,
+        batsman_id,
+        inningsDetails.id,
+      ]
     );
     // 3. update bowler runs, balls
     await client.query(
@@ -261,4 +268,283 @@ export async function updateBasicScore(
     client.release();
   }
   revalidatePath(`/match/${inningsDetails.match_id}/scoring`);
+}
+
+export async function updateBasicOut(
+  inningsDetails: InningsWithMatchNTeams,
+  strikerId: string,
+  bowlerId: string,
+  outType: string
+) {
+  const client = await conn.connect();
+  if (!client) {
+    console.error("Failed to connect to database");
+    return;
+  }
+  try {
+    if (inningsDetails.strikera_id === strikerId) {
+      // update innings table to increase wickets and ball by 1, set strikera_id to null
+      await client.query(
+        "UPDATE innings SET wickets = wickets + 1, balls = balls + 1, strikera_id = NULL WHERE id = $1",
+        [inningsDetails.id]
+      );
+    } else {
+      // update innings table to increase wickets and ball by 1 and set strikerb_id to null
+      await client.query(
+        "UPDATE innings SET wickets = wickets + 1, balls = balls + 1, strikerb_id = NULL WHERE id = $1",
+        [inningsDetails.id]
+      );
+    }
+
+    // update batting_scores table to set is_out to true, out_type and bowler_id
+    await client.query(
+      "UPDATE batting_scores SET is_out = true, balls = balls + 1, out_type = $1, bowler_id = $2 WHERE player_id = $3 AND innings_id = $4",
+      [outType, bowlerId, strikerId, inningsDetails.id]
+    );
+
+    // update bowling_scores table to increase wickets by 1, balls by 1
+    await client.query(
+      "UPDATE bowling_scores SET wickets = wickets + 1, balls = balls + 1 WHERE player_id = $1 AND innings_id = $2",
+      [bowlerId, inningsDetails.id]
+    );
+
+    // insert new record to innings_balls table with is_wicket to true, wicket_type, bowler_id, ball_number, batsman_id, out_batsman_id, innings_id
+    const overNumber = Math.floor(
+      inningsDetails.balls / inningsDetails.ball_in_over
+    );
+    await client.query(
+      "INSERT INTO innings_balls (over_number, ball_number, is_wicket, wicket_type, bowler_id, batsman_id, innings_id, out_batsman_id) VALUES ($1, $2, $3, $4, $5, $6, $7, $8)",
+      [
+        overNumber,
+        inningsDetails.balls,
+        true,
+        outType,
+        bowlerId,
+        strikerId,
+        inningsDetails.id,
+        strikerId,
+      ]
+    );
+  } catch (error) {
+    console.error(error);
+    throw new Error("Failed to update basic out");
+  } finally {
+    client.release();
+  }
+  revalidatePath(`/match/${inningsDetails.match_id}/scoring`);
+}
+
+export async function updateRunOut(
+  out_batsman_id: string,
+  inningsDetails: InningsWithMatchNTeams,
+  strikerId: string,
+  bowlerId: string,
+  totalRuns: number,
+  extras: number,
+  batsmanRuns: number,
+  ballCount: boolean
+) {
+  const client = await conn.connect();
+  if (!client) {
+    console.error("Failed to connect to database");
+    return;
+  }
+  try {
+    if (inningsDetails.strikera_id === out_batsman_id) {
+      // update innings table to increase runs, balls if ballCount is true, wickets by 1,  set strikera_id to null
+      await client.query(
+        "UPDATE innings SET runs = runs + $1, balls = balls + $2, wickets = wickets + 1, extras = extras + $3,  strikera_id = NULL WHERE id = $4",
+        [totalRuns, ballCount ? 1 : 0, extras, inningsDetails.id]
+      );
+    }
+    if (inningsDetails.strikerb_id === out_batsman_id) {
+      // update innings table to increase runs, balls if ballCount is true, wickets by 1,  set strikerb_id to null
+      await client.query(
+        "UPDATE innings SET runs = runs + $1, balls = balls + $2, wickets = wickets + 1, extras = extras + $3,  strikerb_id = NULL WHERE id = $4",
+        [totalRuns, ballCount ? 1 : 0, extras, inningsDetails.id]
+      );
+    }
+
+    const outType = "Run Out";
+    // update batting_scores table to set is_out to true, out_type and bowler_id
+    if (strikerId === out_batsman_id) {
+      await client.query(
+        "UPDATE batting_scores SET is_out = true, balls = balls + $1, out_type = $2, runs = runs + $3  WHERE player_id = $4 AND innings_id = $5",
+        [
+          ballCount ? 1 : 0,
+          outType,
+          batsmanRuns,
+          out_batsman_id,
+          inningsDetails.id,
+        ]
+      );
+    } else {
+      await client.query(
+        "UPDATE batting_scores SET is_out = true, out_type = $1, WHERE player_id = $2 AND innings_id = $3",
+        [outType, out_batsman_id, inningsDetails.id]
+      );
+      await client.query(
+        "UPDATE batting_scores SET runs = runs + $1, balls = balls + $2 WHERE player_id = $3 AND innings_id = $4",
+        [batsmanRuns, ballCount ? 1 : 0, strikerId, inningsDetails.id]
+      );
+    }
+
+    // update bowling_scores table to increase wickets by 1, balls by 1
+    await client.query(
+      "UPDATE bowling_scores SET balls = balls + $1, runs = runs + $2 WHERE player_id = $3 AND innings_id = $4",
+      [ballCount ? 1 : 0, totalRuns, bowlerId, inningsDetails.id]
+    );
+
+    // insert new record to innings_balls table with is_wicket to true, wicket_type, bowler_id, ball_number, batsman_id, out_batsman_id, innings
+    const overNumber = ballCount
+      ? Math.floor((inningsDetails.balls + 1) / inningsDetails.ball_in_over)
+      : Math.floor(inningsDetails.balls / inningsDetails.ball_in_over);
+    await client.query(
+      "INSERT INTO innings_balls (over_number, ball_number, is_wicket, wicket_type, bowler_id, batsman_id, innings_id, out_batsman_id, runs, extras) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10)",
+      [
+        overNumber,
+        inningsDetails.balls + 1,
+        true,
+        outType,
+        bowlerId,
+        strikerId,
+        inningsDetails.id,
+        out_batsman_id,
+        totalRuns,
+        extras,
+      ]
+    );
+  } catch (error) {
+    console.error(error);
+    throw new Error("Failed to update run out");
+  } finally {
+    client.release();
+  }
+  revalidatePath(`/match/${inningsDetails.match_id}/scoring`);
+}
+
+export async function updateOver(
+  innings_id: string,
+  bowlerId: string,
+  match_id: string
+) {
+  const client = await conn.connect();
+  if (!client) {
+    console.error("Failed to connect to database");
+    return;
+  }
+  try {
+    // set bowler_id null in innings table
+    await client.query("UPDATE innings SET bowler_id = NULL WHERE id = $1", [
+      innings_id,
+    ]);
+    // update overs by 1 in bowling_scores table
+    await client.query(
+      "UPDATE bowling_scores SET overs = overs + 1 WHERE player_id = $1 AND innings_id = $2",
+      [bowlerId, innings_id]
+    );
+  } catch (error) {
+    console.error(error);
+    throw new Error("Failed to update over");
+  } finally {
+    client.release();
+  }
+  revalidatePath(`/match/${match_id}/scoring`);
+}
+
+export async function updateExtra(
+  inningsDetails: InningsWithMatchNTeams,
+  bowlerId: string,
+  extras: number
+) {
+  const client = await conn.connect();
+  if (!client) {
+    console.error("Failed to connect to database");
+    return;
+  }
+  try {
+    // update innings table to increase extras by 1
+    await client.query(
+      "UPDATE innings SET extras = extras + $1, runs = runs + $2 WHERE id = $3",
+      [extras, extras, inningsDetails.id]
+    );
+    // update bowling_scores table to increase extras by 1
+    await client.query(
+      "UPDATE bowling_scores SET runs = runs + $1 WHERE player_id = $2 AND innings_id = $3",
+      [extras, bowlerId, inningsDetails.id]
+    );
+    // create a new ball record in innings_balls table
+    await client.query(
+      "INSERT INTO innings_balls (ball_number, runs, extras, bowler_id, innings_id) VALUES ($1, $2, $3, $4, $5)",
+      [inningsDetails.balls, extras, extras, bowlerId, inningsDetails.id]
+    );
+  } catch (error) {
+    console.error(error);
+    throw new Error("Failed to update extra");
+  } finally {
+    client.release();
+  }
+  revalidatePath(`/match/${inningsDetails.match_id}/scoring`);
+}
+
+export async function updateMoreScore(
+  inningDetails: InningsWithMatchNTeams,
+  strikerId: string,
+  bowlerId: string,
+  totalRuns: number,
+  extras: number,
+  batsmanRuns: number,
+  isLegalDelivery: boolean,
+  isSix: boolean,
+  isFour: boolean
+) {
+  const client = await conn.connect();
+  if (!client) {
+    console.error("Failed to connect to database");
+    return;
+  }
+  try {
+    // update innings table to increase runs, balls if isLegalDelivery is true, wickets by 1,  set strikera_id to null
+    await client.query(
+      "UPDATE innings SET runs = runs + $1, balls = balls + $2, extras = extras + $3 WHERE id = $4",
+      [totalRuns, isLegalDelivery ? 1 : 0, extras, inningDetails.id]
+    );
+
+    // update batting_scores table to set is_out to true, out_type and bowler_id
+    await client.query(
+      "UPDATE batting_scores SET runs = runs + $1, balls = balls + 1, sixes = sixes + $2, fours = fours + $3 WHERE player_id = $4 AND innings_id = $5",
+      [batsmanRuns, isSix ? 1 : 0, isFour ? 1 : 0, strikerId, inningDetails.id]
+    );
+
+    // update bowling_scores table to increase wickets by 1, balls by 1
+    await client.query(
+      "UPDATE bowling_scores SET runs = runs + $1, balls = balls + $2 WHERE player_id = $3 AND innings_id = $4",
+      [totalRuns, isLegalDelivery ? 1 : 0, bowlerId, inningDetails.id]
+    );
+
+    // insert new record to innings_balls table with is_wicket to true, wicket_type, bowler_id, ball_number, batsman_id, out_batsman_id, innings
+    const overNumber = isLegalDelivery
+      ? Math.floor((inningDetails.balls + 1) / inningDetails.ball_in_over)
+      : Math.floor(inningDetails.balls / inningDetails.ball_in_over);
+    await client.query(
+      "INSERT INTO innings_balls (over_number, ball_number, bowler_id, batsman_id, innings_id, runs, extras, is_six, is_four) VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)",
+      [
+        overNumber,
+        isLegalDelivery ? inningDetails.balls + 1 : inningDetails.balls,
+        bowlerId,
+        strikerId,
+        inningDetails.id,
+        totalRuns,
+        extras,
+        isSix,
+        isFour,
+      ]
+    );
+  } catch (error) {
+    console.error(error);
+    throw new Error("Failed to update more score");
+  } finally {
+    client.release();
+  }
+  revalidatePath(`/match/${inningDetails.match_id}/scoring`);
 }

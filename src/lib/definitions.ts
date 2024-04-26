@@ -61,6 +61,7 @@ export type BattingScores = {
   sixes: number;
   is_out: boolean;
   out_type: string;
+  bowler_id: string;
 };
 
 export type BattingScoresWithPlayer = BattingScores & {
@@ -95,5 +96,6 @@ export type InningsBalls = {
   batsman_id: string;
   bowler_id: string;
   extras: number;
+  out_batsman_id: string;
   created_at: Date;
 };

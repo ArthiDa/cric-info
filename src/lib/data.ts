@@ -60,9 +60,9 @@ export async function fetchMatches() {
   }
 
   try {
-    // fetch matches with team information
+    // fetch matches with team information Order by created_at DESC
     const res = await client.query(
-      "SELECT matches.*, teamA.team_name as teamA_name, teamB.team_name as teamB_name FROM matches INNER JOIN teams as teamA ON matches.teamA_id = teamA.id INNER JOIN teams as teamB ON matches.teamB_id = teamB.id"
+      "SELECT matches.*, teamA.team_name as teamA_name, teamB.team_name as teamB_name FROM matches INNER JOIN teams as teamA ON matches.teamA_id = teamA.id INNER JOIN teams as teamB ON matches.teamB_id = teamB.id ORDER BY matches.created_at DESC"
     );
     return res.rows as MatchWithTeams[];
   } catch (error) {
@@ -156,13 +156,32 @@ export async function fetchCurrentStrikers(inningsId: string) {
       inningsId,
     ]);
     const innings = res.rows[0] as InningsWithMatchNTeams;
+    // console.log(innings);
+    let strikers: BattingScoresWithPlayer[] = [];
     if (innings.strikera_id && innings.strikerb_id) {
       // fetch striker from batting_scores table with player information from players table for the current innings
       const res = await client.query(
         "SELECT batting_scores.*, players.player_name FROM batting_scores INNER JOIN players ON batting_scores.player_id = players.id WHERE innings_id = $1 AND player_id IN ($2, $3)",
         [inningsId, innings.strikera_id, innings.strikerb_id]
       );
+      // console.log(res.rows);
       return res.rows as BattingScoresWithPlayer[];
+    } else if (innings.strikera_id) {
+      // fetch striker from batting_scores table with player information from players table for the current innings
+      const res = await client.query(
+        "SELECT batting_scores.*, players.player_name FROM batting_scores INNER JOIN players ON batting_scores.player_id = players.id WHERE innings_id = $1 AND player_id = $2",
+        [inningsId, innings.strikera_id]
+      );
+      strikers.push(res.rows[0] as BattingScoresWithPlayer);
+      return strikers;
+    } else if (innings.strikerb_id) {
+      // fetch striker from batting_scores table with player information from players table for the current innings
+      const res = await client.query(
+        "SELECT batting_scores.*, players.player_name FROM batting_scores INNER JOIN players ON batting_scores.player_id = players.id WHERE innings_id = $1 AND player_id = $2",
+        [inningsId, innings.strikerb_id]
+      );
+      strikers.push(res.rows[0] as BattingScoresWithPlayer);
+      return strikers;
     }
     return [] as BattingScoresWithPlayer[];
   } catch (error) {
@@ -218,10 +237,8 @@ export async function fetchLastSixBalls(inningsId: string) {
       "SELECT * FROM innings_balls WHERE innings_id = $1 ORDER BY created_at DESC LIMIT 6",
       [inningsId]
     );
-    // sort the balls in ascending order of ball_number
-    res.rows.sort(
-      (a: InningsBalls, b: InningsBalls) => a.ball_number - b.ball_number
-    );
+    // reverse sort the balls to get the last six balls in the correct order
+    res.rows.reverse();
     return res.rows as InningsBalls[];
   } catch (error) {
     console.error(error);
